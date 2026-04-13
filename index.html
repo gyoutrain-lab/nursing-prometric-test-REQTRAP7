@@ -1,0 +1,722 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCFHS ERROR RESISTANCE SIMULATOR (200 ITEMS)</title>
+    <style>
+        :root { --crimson: #800000; --gold: #b8860b; --dark: #0a0a0a; --gray: #1a1a1a; --text: #e0e0e0; }
+        body { font-family: 'Courier New', Courier, monospace; background: var(--dark); color: var(--text); line-height: 1.6; padding: 20px; }
+        .wrapper { max-width: 900px; margin: auto; border: 2px solid var(--gold); padding: 30px; background: var(--gray); }
+        .warning-header { text-align: center; border-bottom: 2px solid var(--crimson); margin-bottom: 30px; padding-bottom: 10px; }
+        .warning-header h1 { color: var(--crimson); letter-spacing: 3px; margin: 0; }
+        .warning-header p { color: var(--gold); font-weight: bold; font-size: 0.9rem; }
+        .q-card { margin-bottom: 50px; padding: 20px; border-left: 4px solid var(--gold); background: #222; }
+        .vignette { color: #aaa; margin-bottom: 15px; font-style: italic; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .question { font-weight: bold; font-size: 1.1rem; color: #fff; display: block; margin-bottom: 20px; }
+        .opt { display: block; padding: 12px; margin: 8px 0; background: #111; border: 1px solid #444; cursor: pointer; transition: 0.3s; }
+        .opt:hover { border-color: var(--gold); background: #1a1a1a; }
+        .opt input { margin-right: 15px; accent-color: var(--gold); }
+        .btn-submit { width: 100%; background: var(--crimson); color: white; padding: 20px; border: none; font-size: 1.2rem; cursor: pointer; font-weight: bold; margin-top: 30px; }
+        #transcript { display: none; background: white; color: black; padding: 40px; border: 10px double black; }
+        .result-row { border-bottom: 1px solid #ddd; padding: 15px 0; }
+        .fail-marker { color: #d00; font-weight: bold; text-transform: uppercase; }
+        .pass-marker { color: #008000; font-weight: bold; }
+        .rationale { font-size: 0.85rem; background: #f0f0f0; padding: 10px; margin-top: 5px; border-left: 3px solid var(--crimson); }
+        .footer-note { text-align: center; color: var(--gold); margin-top: 20px; font-size: 0.8rem; border-top: 1px dashed var(--gold); padding-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="exam-view" class="wrapper">
+    <div class="warning-header">
+        <h1>PROMETRIC SAFETY FILTER</h1>
+        <p>LEVEL 4: ERROR RESISTANCE & TRAP DETECTION (200 ITEMS)</p>
+    </div>
+
+    <div style="background: #000; padding: 15px; margin-bottom: 30px; border: 1px dashed var(--gold);">
+        <label style="color:var(--gold)">CANDIDATE IDENTIFICATION:</label><br>
+        <input type="text" id="candidate" style="width:100%; background:transparent; border:none; border-bottom:1px solid var(--gold); color:white; font-size:1.2rem; outline:none;" placeholder="Enter Name...">
+    </div>
+
+    <div id="quiz-mount"></div>
+    
+    <button class="btn-submit" onclick="analyzePerformance()">PROCESS TRANSCRIPT</button>
+</div>
+
+<div id="transcript" class="wrapper">
+    <div class="warning-header">
+        <h1 style="color: #000;">PERFORMANCE TRANSCRIPT</h1>
+        <p style="color: #333;">Saudi Commission for Health Specialties | Level 4 Evaluator</p>
+    </div>
+    <div id="meta-data" style="background: #f9f9f9; padding: 20px; border: 1px solid #000; margin-bottom: 30px; font-family: monospace;"></div>
+    <div id="analysis-results"></div>
+    <button class="btn-submit" style="background: #000;" onclick="window.print()">PRINT OFFICIAL RECORD</button>
+    <button class="btn-submit" style="background: #444; margin-top: 10px;" onclick="location.reload()">RETAKE SIMULATION</button>
+</div>
+
+<script>
+const questions = [
+    // 1-10 (Bases on previous history)
+{
+        v: "A 34-week gestation patient is admitted with sudden, painless, bright red vaginal bleeding.",
+        q: "Which 'Assessment Action' is strictly prohibited for this patient?",
+        o: ["Performing a digital vaginal examination", "Monitoring the fetal heart rate externally", "Assessing the fundal height", "Obtaining a blood sample for a CBC"],
+        a: 0, r: "In suspected Placenta Previa (Safety), a vaginal exam can cause catastrophic hemorrhage by puncturing the low-lying placenta."
+    },
+    {
+        v: "A patient in active labor has an external fetal monitor showing 'Late Decelerations' with every contraction.",
+        q: "What is the 'Pathophysiological Logic' and the priority action?",
+        o: ["Uteroplacental insufficiency; turn the patient to the left side and give Oxygen", "Cord compression; place the patient in Trendelenburg position", "Head compression; document as a normal finding in active labor", "Maternal hypotension; increase the rate of Pitocin infusion"],
+        a: 0, r: "Late decelerations (Safety) indicate fetal hypoxia from poor placental perfusion. Left-side positioning (Action) optimizes blood flow."
+    },
+    {
+        v: "A pregnant patient at 36 weeks develops a headache, blurry vision, and a BP of 165/110. The nurse notes 3+ proteinuria.",
+        q: "Which 'Lethal Complication' is the nurse prioritizing for prevention?",
+        o: ["Eclamptic seizures", "Gestational Diabetes", "Placenta Accreta", "Preterm Rupture of Membranes"],
+        a: 0, r: "Severe Preeclampsia (Safety) can transition into Eclampsia (seizures) at any time. Magnesium Sulfate is usually indicated."
+    },
+    {
+        v: "A laboring patient is receiving 'Magnesium Sulfate' for preeclampsia. The nurse notes the patellar reflex is absent.",
+        q: "What is the 'Immediate Life-Saving Step'?",
+        o: ["Stop the Magnesium infusion and prepare Calcium Gluconate", "Increase the IV fluid rate to flush the Magnesium", "Decrease the Magnesium dose by half", "Administer a dose of Hydralazine for blood pressure"],
+        a: 0, r: "Loss of Deep Tendon Reflexes (Safety) is the first sign of Magnesium toxicity. Stopping the drug prevents respiratory arrest (Action)."
+    },
+    {
+        v: "A patient at 38 weeks gestation reports a sudden 'gush of fluid'. The nurse sees a loop of the umbilical cord protruding from the vagina.",
+        q: "What is the 'Emergency Maneuver' to protect the fetus?",
+        o: ["Apply upward pressure on the fetal presenting part and assume a knee-chest position", "Gently push the cord back into the uterus", "Cover the cord with dry gauze and call the doctor", "Encourage the patient to walk to help the labor progress"],
+        a: 0, r: "Cord Prolapse (Safety) cuts off fetal oxygen. Relieving pressure on the cord (Action) is the only way to maintain perfusion until a C-section."
+    },
+    {
+        v: "A postpartum patient who delivered 2 hours ago has a 'boggy' uterus that is shifted to the right of the midline.",
+        q: "What is the 'First Nursing Action'?",
+        o: ["Assist the patient to empty her bladder", "Massage the fundus until it becomes firm", "Increase the rate of the Oxytocin infusion", "Notify the physician of a potential hemorrhage"],
+        a: 0, r: "A full bladder (Safety) displaces the uterus, preventing it from contracting (atony). Emptying the bladder (Action) resolves the displacement."
+    },
+    {
+        v: "A newborn is assessed at 1 minute of life: Heart rate 110, slow/irregular cry, some flexion of extremities, grimace with suctioning, and blue extremities with a pink body.",
+        q: "Calculate the 'APGAR Score'.",
+        o: ["6", "8", "4", "9"],
+        a: 0, r: "HR(2), Resp(1), Muscle(1), Reflex(1), Color(1) = 6. This score indicates moderate distress (Safety)."
+    },
+
+    // --- PEDIATRIC SECTION ---
+    {
+        v: "A 4-year-old child is brought to the ER with drooling, muffled voice, and a high fever. The child is sitting in a 'tripod' position.",
+        q: "Which 'Safety Rule' must the nurse follow regarding the physical exam?",
+        o: ["Do not attempt to visualize the throat with a tongue depressor", "Immediately place the child in a supine position for assessment", "Obtain a throat culture to identify the bacteria", "Encourage the child to lie down and rest"],
+        a: 0, r: "Epiglottitis (Safety) is a medical emergency. Touching the throat (Action) can trigger total airway obstruction."
+    },
+    {
+        v: "An infant with 'Tetralogy of Fallot' begins to cry and becomes cyanotic with rapid breathing (a 'Tet Spell').",
+        q: "What is the 'Priority Positioning' for this infant?",
+        o: ["Knee-to-chest position", "High-Fowler's position", "Supine with legs extended", "Side-lying position"],
+        a: 0, r: "The knee-chest position (Action) increases systemic vascular resistance, which forces more blood into the lungs for oxygenation (Safety)."
+    },
+    {
+        v: "A 10-year-old child with Type 1 Diabetes is found confused and diaphoretic after soccer practice.",
+        q: "What is the 'First Action' for the nurse or coach?",
+        o: ["Give 15g of rapid-acting carbohydrate (e.g., orange juice)", "Administer the scheduled dose of regular insulin", "Have the child lie down and check the temperature", "Provide a high-protein snack like peanut butter"],
+        a: 0, r: "Hypoglycemia (Safety) requires immediate sugar. The 'Rule of 15' (Action) is the standard treatment."
+    },
+    {
+        v: "A 2-year-old child has a 'barking' cough and inspiratory stridor that worsens at night.",
+        q: "Which 'Home Management' technique is usually recommended for mild cases?",
+        o: ["Exposure to cool mist or cold night air", "Administration of oral codeine for the cough", "Giving the child hot liquids to drink", "Using a warm-mist humidifier in the bedroom"],
+        a: 0, r: "Laryngotracheobronchitis (Croup) symptoms (Safety) are often relieved by cool air (Action), which reduces mucosal edema."
+    },
+    {
+        v: "A child is admitted with suspected 'Intussusception'.",
+        q: "Which 'Classic Stool Finding' supports this diagnosis?",
+        o: ["Currant jelly-like stools (blood and mucus)", "Steatorrhea (fatty, foul-smelling stools)", "Ribbon-like stools", "Hard, marble-like constipation"],
+        a: 0, r: "Intussusception causes bowel obstruction and vascular compromise (Safety), leading to the characteristic 'currant jelly' stool."
+    },
+    {
+        v: "A nurse is caring for an infant post-'Cleft Lip' repair.",
+        q: "Which 'Position' is prioritized to protect the surgical site?",
+        o: ["Supine or side-lying, avoiding the prone position", "Prone position to allow drainage of secretions", "High-Fowler's position at all times", "Trendelenburg position"],
+        a: 0, r: "The prone position (Unsafe) allows the infant to rub the suture line against the bed, risking dehiscence (Safety)."
+    },
+    {
+        v: "A 6-year-old child is diagnosed with 'Acute Glomerulonephritis' following a sore throat.",
+        q: "Which 'Assessment Finding' is the nurse's primary concern?",
+        o: ["Hypertension and tea-colored urine", "Hypotension and clear urine", "High fever and diarrhea", "Polyuria and weight loss"],
+        a: 0, r: "Post-streptococcal glomerulonephritis (Safety) causes fluid retention and hypertension (Action) due to kidney inflammation."
+    },
+    {
+        v: "An adolescent with 'Scoliosis' is wearing a Milwaukee brace.",
+        q: "Which 'Skin Care' instruction is correct for safety?",
+        o: ["Wear a thin, cotton t-shirt under the brace", "Apply thick lotions or oils under the brace points", "Ensure the brace is tight enough to leave red marks", "Avoid cleaning the brace to prevent rusting"],
+        a: 0, r: "A cotton shirt (Action) prevents skin breakdown/friction from the brace (Safety) without trapping moisture."
+    },
+    {
+        v: "A child with 'Hemophilia A' has a swollen, painful knee after a fall.",
+        q: "What is the 'Priority Nursing Action'?",
+        o: ["Elevate the limb and administer Factor VIII concentrate", "Apply a warm compress and perform range-of-motion", "Administer Aspirin for pain management", "Encourage the child to walk to prevent stiffness"],
+        a: 0, r: "Hemarthrosis (Safety) requires immediate replacement of the missing clotting factor (Action) and RICE (Rest, Ice, Compression, Elevation)."
+    },
+    {
+        v: "A patient is admitted with 'Placental Abruption'.",
+        q: "Which 'Sign' is characteristically different from Placenta Previa?",
+        o: ["Severe abdominal pain and a rigid, board-like uterus", "Painless, bright red vaginal bleeding", "Soft, relaxed uterus on palpation", "Slow and steady maternal heart rate"],
+        a: 0, r: "Abruption (Safety) involves the premature separation of the placenta, causing internal bleeding and extreme uterine tenderness (Action)."
+    },
+    {
+        v: "A 9-month-old infant is being treated for severe 'Dehydration' due to gastroenteritis.",
+        q: "Which 'Objective Metric' is the best indicator of rehydration success?",
+        o: ["Urine output of 1-2 mL/kg/hr", "The infant's fontanel is slightly sunken", "The infant is sleeping quietly", "Skin turgor returns to normal within 5 seconds"],
+        a: 0, r: "Urine output (Action) is the most reliable measure of organ perfusion and fluid status in a child (Safety)."
+    },
+    {
+        v: "A nurse is caring for a child with 'Pyloric Stenosis'.",
+        q: "Which 'Vomiting Pattern' is pathognomonic for this condition?",
+        o: ["Projectile, non-bile stained vomiting after feeding", "Slow, effortless regurgitation of milk", "Vomiting containing green bile and mucus", "Vomiting that occurs only at night"],
+        a: 0, r: "The thickened pylorus (Safety) prevents stomach contents from entering the duodenum, causing forceful, non-bilious projectile vomiting (Action)."
+    },
+    {
+        v: "A patient at 32 weeks gestation is in 'Preterm Labor' and is receiving 'Betamethasone'.",
+        q: "What is the 'Therapeutic Purpose' of this medication?",
+        o: ["To promote fetal lung maturity and surfactant production", "To stop the uterine contractions immediately", "To treat a suspected maternal infection", "To increase the maternal blood pressure"],
+        a: 0, r: "Betamethasone (Action) reduces the risk of Respiratory Distress Syndrome (Safety) in premature infants."
+    },
+  {
+        v: "A pregnant patient at 30 weeks gestation is diagnosed with 'Placenta Previa'. She is stable and being discharged for home management.",
+        q: "Which 'Discharge Instruction' is a priority for maternal-fetal safety?",
+        o: ["Maintain strict pelvic rest and avoid sexual intercourse", "Perform vigorous aerobic exercise to improve circulation", "Monitor fetal kicks once every three days", "Return for a follow-up exam only if pain occurs"],
+        a: 0, r: "Pelvic rest (Action) is mandatory in Placenta Previa (Safety) because any cervical stimulation can trigger life-threatening hemorrhage."
+    },
+    {
+        v: "A patient in labor is diagnosed with 'Shoulder Dystocia' after the fetal head emerges.",
+        q: "Which 'Nursing Maneuver' should be performed first?",
+        o: ["McRoberts maneuver (flexing thighs against abdomen)", "Apply strong fundal pressure to push the baby out", "Perform a vacuum-assisted delivery immediately", "Increase the Pitocin infusion to strengthen contractions"],
+        a: 0, r: "McRoberts maneuver (Action) opens the pelvic outlet. Fundal pressure (Unsafe) is strictly contraindicated as it further wedges the shoulder behind the symphysis pubis (Safety)."
+    },
+    {
+        v: "A newborn is suspected of having 'Tracheoesophageal Fistula' (TEF).",
+        q: "Which 'Clinical Triad' of symptoms supports this diagnosis?",
+        o: ["Coughing, Choking, and Cyanosis during feedings", "Vomiting, Diarrhea, and Abdominal distension", "Bradycardia, Hypotension, and Lethargy", "Jaundice, High-pitched cry, and Poor sucking"],
+        a: 0, r: "The '3 Cs' (Safety) are classic signs of TEF. Saliva or milk enters the trachea (Action), causing immediate respiratory distress."
+    },
+    {
+        v: "A 2-year-old child is admitted with 'Nephrotic Syndrome'.",
+        q: "Which 'Laboratory Finding' is the hallmark of this condition?",
+        o: ["Massive proteinuria and hypoalbuminemia", "Hematuria and hypertension", "Elevated blood urea nitrogen (BUN) and low creatinine", "Glucosuria and ketonuria"],
+        a: 0, r: "Nephrotic syndrome (Safety) involves increased glomerular permeability, leading to massive protein loss in urine and low protein in the blood (Action)."
+    },
+    {
+        v: "A patient is receiving 'Oxytocin' (Pitocin) for labor induction. The contractions are lasting 100 seconds and occurring every 90 seconds.",
+        q: "What is the 'Immediate Safety Action'?",
+        o: ["Stop the Oxytocin infusion immediately", "Increase the rate of the primary IV fluids", "Administer oxygen via a non-rebreather mask", "Turn the patient to the right-side lying position"],
+        a: 0, r: "Tachysystole (Safety) reduces blood flow to the placenta. Stopping the Oxytocin (Action) allows the uterus to rest and restores fetal oxygenation."
+    },
+    {
+        v: "An infant is born to a mother with 'Gestational Diabetes'.",
+        q: "Which 'Neonatal Metabolic Crisis' is the most common within the first hours of life?",
+        o: ["Hypoglycemia due to high levels of circulating fetal insulin", "Hyperglycemia due to high maternal glucose levels", "Hypocalcemia due to parathyroid suppression", "Hypernatremia due to dehydration"],
+        a: 0, r: "The infant's pancreas produces high insulin in response to maternal sugar (Safety). Once the cord is cut, the sugar source is gone, but the insulin remains high (Action)."
+    },
+    {
+        v: "A 6-month-old infant is admitted with 'Non-Organic Failure to Thrive' (FTT).",
+        q: "Which 'Nursing Strategy' is most effective during feeding?",
+        o: ["Establish a structured routine and maintain a quiet, non-distracting environment", "Feed the infant only when they cry or show extreme hunger", "Have multiple different nurses feed the infant to promote socialization", "Allow the infant to play with toys during the entire feeding process"],
+        a: 0, r: "Infants with non-organic FTT (Safety) need a calm, consistent environment (Action) to focus on intake and build trust with the caregiver."
+    },
+    {
+        v: "A patient 24 hours postpartum reports a sudden onset of 'Shortness of Breath' and 'Chest Pain'.",
+        q: "Which 'Postpartum Complication' is the nurse suspecting?",
+        o: ["Pulmonary Embolism", "Postpartum Depression", "Normal physiological adjustment", "Endometritis"],
+        a: 0, r: "Pregnancy is a hypercoagulable state (Safety). Sudden respiratory distress (Action) is a classic sign of a blood clot in the lungs."
+    },
+    {
+        v: "A child with 'Celiac Disease' is being discharged.",
+        q: "Which 'Food Item' must be strictly excluded from the diet?",
+        o: ["Wheat, barley, and rye", "Rice, corn, and potatoes", "Milk, cheese, and yogurt", "Fresh fruits and vegetables"],
+        a: 0, r: "Gluten (Safety) triggers an immune response that damages the small intestine. Patients must avoid wheat-based products (Action)."
+    },
+    {
+        v: "A 12-hour-old newborn has a 'Yellowish Tint' on the face and chest.",
+        q: "What is the 'Clinical Significance' of jaundice appearing within the first 24 hours of life?",
+        o: ["Pathological jaundice, likely due to hemolytic disease (Rh/ABO incompatibility)", "Physiological jaundice, which is normal for most newborns", "Breast milk jaundice, which requires stopping breastfeeding", "A normal reaction to the vitamin K injection"],
+        a: 0, r: "Jaundice in the first 24 hours (Safety) is never normal. It indicates rapid red blood cell breakdown (Action) and requires immediate investigation."
+    },
+    {
+        v: "A child is diagnosed with 'Kawasaki Disease' and is in the 'Acute Phase'.",
+        q: "Which 'Cardiac Complication' is the nurse monitoring for using echocardiography?",
+        o: ["Coronary artery aneurysms", "Ventricular septal defect", "Mitral valve prolapse", "Pulmonary stenosis"],
+        a: 0, r: "Kawasaki (Safety) causes systemic vasculitis. The most dangerous complication is the weakening of the coronary arteries (Action)."
+    },
+    {
+        v: "A patient at 36 weeks gestation has a 'Positive Group B Strep (GBS)' vaginal culture.",
+        q: "What is the 'Standard Management' during labor?",
+        o: ["Administration of IV Penicillin during labor", "Performing a C-section to avoid vaginal transmission", "Administering oral antibiotics to the mother for 10 days", "Treating the newborn with antibiotics only after birth"],
+        a: 0, r: "Prophylactic IV antibiotics (Action) during labor significantly reduce the risk of neonatal GBS sepsis/meningitis (Safety)."
+    },
+    {
+        v: "A 5-year-old child is admitted with 'Acute Rheumatic Fever'.",
+        q: "The nurse notes involuntary, 'jerky' movements of the limbs and face.",
+        q: "What is this 'Neurological Finding' called?",
+        o: ["Sydenham's Chorea", "Asterixis", "Decerebrate posturing", "Tonic-clonic seizure"],
+        a: 0, r: "Chorea (Safety) is a major Jones criterion for Rheumatic Fever, reflecting CNS involvement following a strep infection (Action)."
+    },
+    {
+        v: "A nurse is caring for an infant with 'Hydrocephalus' who just had a VP Shunt placed.",
+        q: "Which 'Position' should the infant be placed in post-operatively?",
+        o: ["Flat on the non-operative side", "Semi-Fowler's at a 45-degree angle", "Prone position", "Trendelenburg position"],
+        a: 0, r: "Placing the infant flat (Action) prevents rapid CSF drainage (Safety). Avoid the operative side to prevent pressure on the shunt valve."
+    },
+    {
+        v: "A pregnant patient with 'Type 1 Diabetes' is in her second trimester.",
+        q: "What change in 'Insulin Requirement' does the nurse expect?",
+        o: ["An increase in insulin dose due to placental hormones (HPL) causing insulin resistance", "A decrease in insulin dose because the fetus uses the mother's insulin", "No change in insulin requirements throughout pregnancy", "A decrease in insulin dose to prevent fetal macrosomia"],
+        a: 0, r: "Placental hormones (Safety) act as insulin antagonists. As the pregnancy progresses, insulin needs typically rise significantly (Action)."
+    },
+    {
+        v: "A newborn is suspected of having 'Developmental Dysplasia of the Hip' (DDH).",
+        q: "Which 'Physical Assessment' finding is characteristic of DDH?",
+        o: ["Asymmetric gluteal and thigh skin folds", "Symmetrical leg length", "Smooth, silent movement of the hip during abduction", "Increased range of motion in the affected hip"],
+        a: 0, r: "Uneven skin folds and a shorter leg on the affected side (Safety) are classic indicators of a dislocated or unstable hip (Action)."
+    },
+    {
+        v: "A child with 'Sickle Cell Anemia' is admitted with a 'Vaso-occlusive Crisis'.",
+        q: "Which 'Intervention' is the priority to improve perfusion?",
+        o: ["Aggressive IV hydration and pain management", "Administration of a cold compress to the joints", "Restricting fluid intake to prevent edema", "Placing the child in a high-oxygen tent"],
+        a: 0, r: "Hydration (Action) dilutes the blood and helps 'unstick' sickled cells (Safety). Pain management is essential but hydration fixes the underlying occlusion."
+    },
+    {
+        v: "A patient at 28 weeks gestation is receiving 'Terbutaline' for preterm labor.",
+        q: "Which 'Maternal Side Effect' is a priority for the nurse to monitor?",
+        o: ["Tachycardia and palpitations", "Bradycardia and hypotension", "Constipation and urinary retention", "Extreme drowsiness and lethargy"],
+        a: 0, r: "Terbutaline is a beta-mimetic (Action) that relaxes the uterus but also stimulates the heart (Safety), causing rapid heart rate."
+    },
+    {
+        v: "An 18-month-old child is admitted for 'Aspirin (Salicylate)' poisoning.",
+        q: "Which 'Acid-Base Imbalance' is expected initially?",
+        o: ["Respiratory alkalosis followed by metabolic acidosis", "Pure respiratory acidosis", "Pure metabolic alkalosis", "Normal acid-base balance"],
+        a: 0, r: "Salicylates stimulate the respiratory center (alkalosis) (Safety) before interfering with metabolism (acidosis) (Action)."
+    },
+    {
+        v: "A patient with 'Placental Abruption' develops bleeding from her IV site and gums.",
+        q: "Which 'Coagulation Disorder' is the nurse suspecting?",
+        o: ["Disseminated Intravascular Coagulation (DIC)", "Vitamin K deficiency", "Idiopathic Thrombocytopenic Purpura (ITP)", "Hemophilia B"],
+        a: 0, r: "Abruption (Safety) releases thromboplastin into the blood, triggering widespread clotting that consumes all factors, leading to hemorrhage (Action)."
+    },
+    {
+        v: "A child with 'Spina Bifida (Myelomeningocele)' is awaiting surgery.",
+        q: "What is the 'Priority Nursing Action' to protect the sac?",
+        o: ["Cover the sac with a sterile, moist, non-adherent dressing", "Keep the sac open to air to allow it to dry", "Apply a pressure dressing to prevent CSF leakage", "Place the infant in a supine position"],
+        a: 0, r: "Keeping the sac moist and sterile (Action) prevents infection and tissue breakdown (Safety) before surgical closure."
+    },
+    {
+        v: "A patient has just undergone a 'C-Section' under general anesthesia.",
+        q: "What is the 'Safety Action' to prevent postpartum uterine atony?",
+        o: ["Perform frequent fundal massages", "Encourage the patient to breastfeed immediately", "Place the patient in a Trendelenburg position", "Restrict oral fluid intake for 24 hours"],
+        a: 0, r: "General anesthesia (Safety) relaxes all muscles, including the uterus. Frequent massage (Action) ensures the uterus stays contracted to prevent bleeding."
+    },
+    {
+        v: "A 3-year-old child is suspected of having 'Laryngotracheobronchitis' (Croup).",
+        q: "The nurse hears 'Inspiratory Stridor' while the child is at rest.",
+        q: "What does this 'Resting Stridor' indicate?",
+        o: ["Increasing airway obstruction and the need for medical intervention", "The child is recovering well", "A normal finding for the first 48 hours of croup", "The child is simply agitated and needs a sedative"],
+        a: 0, r: "Stridor at rest (Safety) indicates significant narrowing of the airway (Action) and is a red flag for respiratory failure."
+    },
+    {
+        v: "A patient at 10 weeks gestation has 'Hyperemesis Gravidarum'.",
+        q: "Which 'Urinalysis Finding' is expected due to prolonged vomiting and starvation?",
+        o: ["Ketonuria", "Proteinuria", "Glucosuria", "Hematuria"],
+        a: 0, r: "When the body cannot use glucose for energy (Safety), it breaks down fat, producing ketones (Action) in the urine."
+    },
+    {
+        v: "A nurse is caring for a child with 'Wilms' Tumor' (Nephroblastoma).",
+        q: "What 'Safety Precaution' must be posted at the child's bedside?",
+        o: ["DO NOT PALPATE THE ABDOMEN", "Strict isolation: Wear mask and gloves", "Maintain child in a prone position", "Monitor for severe hypotension"],
+        a: 0, r: "Palpating the abdomen (Unsafe) can rupture the tumor capsule and cause the cancer to spread (Safety) throughout the abdomen."
+    },
+    {
+        v: "A laboring patient is diagnosed with 'Preeclampsia'.",
+        q: "Which 'Environment' is most appropriate for her safety?",
+        o: ["A quiet, darkened room with restricted visitors", "A bright, active room near the nurse's station", "A semi-private room with a patient who has a newborn", "A room with a television at high volume"],
+        a: 0, r: "CNS irritability (Safety) in preeclampsia can lead to seizures. A low-stimulation environment (Action) helps prevent triggering an eclamptic event."
+    },
+    {
+        v: "A 4-month-old infant is diagnosed with 'Hirschsprung's Disease'.",
+        q: "What 'Physical Finding' is the hallmark of this condition?",
+        o: ["Failure to pass meconium in the first 24-48 hours of life", "Projectile vomiting immediately after feeding", "Intense hunger and weight gain", "A palpable olive-shaped mass in the RUQ"],
+        a: 0, r: "Hirschsprung's (Safety) involves a lack of nerves in the colon, causing a functional obstruction (Action) and failure to pass early stool."
+    },
+    {
+        v: "A patient in labor has a 'Prolonged Second Stage'. The fetal head is at +2 station.",
+        q: "What is a 'Safety Risk' associated with 'Vacuum-Assisted Delivery'?",
+        o: ["Cephalohematoma and neonatal jaundice", "Maternal urinary tract infection", "Fetal shoulder dystocia", "Fetal macrosomia"],
+        a: 0, r: "Vacuum extraction (Action) can cause scalp trauma (Safety). As the blood in a hematoma breaks down, it increases the risk of hyperbilirubinemia."
+    },
+    {
+        v: "A child is receiving 'Digoxin' for Congestive Heart Failure.",
+        q: "The child's pulse is 60 bpm. What is the 'Correct Safety Action'?",
+        o: ["Hold the dose and notify the physician", "Administer the dose and reassess in 1 hour", "Give half of the ordered dose", "Wait until the child is more active to give the dose"],
+        a: 0, r: "For a young child/infant, a heart rate below 70-90 (Safety) is a contraindication for Digoxin (Action). 60 bpm is too low."
+    },
+    {
+        v: "A postpartum patient is diagnosed with 'Mastitis'.",
+        q: "What is the 'Safety Instruction' regarding breastfeeding?",
+        o: ["Continue breastfeeding or pumping frequently from both breasts", "Stop breastfeeding immediately and switch to formula", "Breastfeed only from the unaffected side", "Apply ice packs and avoid emptying the breast"],
+        a: 0, r: "Stasis of milk (Safety) worsens mastitis. Frequent emptying (Action) is the key to resolution; the infection is in the tissue, not the milk."
+    },
+  {
+        v: "A 4-year-old child with 'Tetralogy of Fallot' is seen squatting in the hallway during play.",
+        q: "What is the 'Physiological Benefit' of this squatting position?",
+        o: ["It increases systemic vascular resistance, forcing more blood into the lungs", "It helps the child rest their leg muscles after running", "It decreases the workload of the right atrium", "It prevents the child from fainting due to hypoglycemia"],
+        a: 0, r: "Squatting (Action) is a natural compensatory mechanism that increases systemic pressure, reducing the right-to-left shunt and improving oxygenation (Safety)."
+    },
+    {
+        v: "A patient at 35 weeks gestation is admitted with 'Preterm Rupture of Membranes' (PROM).",
+        q: "Which 'Assessment Finding' is the most sensitive indicator of Chorioamnionitis?",
+        o: ["Maternal tachycardia and foul-smelling amniotic fluid", "Decreased maternal blood pressure", "Increased fetal movement", "Maternal reports of increased thirst"],
+        a: 0, r: "Infection of the membranes (Safety) manifests early as maternal/fetal tachycardia and malodorous fluid (Action), requiring immediate antibiotic therapy."
+    },
+    {
+        v: "A newborn is diagnosed with 'Esophageal Atresia'.",
+        q: "What is the 'Priority Nursing Goal' until surgery can be performed?",
+        o: ["Prevent aspiration by maintaining a supine position with the HOB elevated", "Ensure the infant is fed small, frequent amounts of breast milk", "Place the infant in a prone position to drain secretions", "Maintain the infant in a flat, side-lying position"],
+        a: 0, r: "Aspiration (Safety) is the biggest risk. Elevating the head and keeping the pouch empty with suction (Action) are vital safety steps."
+    },
+    {
+        v: "A 10-year-old child is admitted with 'Acute Post-Streptococcal Glomerulonephritis'.",
+        q: "Which 'Daily Metric' is the most accurate indicator of fluid balance?",
+        o: ["Daily weight using the same scale and time", "Measuring the abdominal girth every 8 hours", "Checking for pedal edema once per shift", "Monitoring the specific gravity of every void"],
+        a: 0, r: "In renal conditions (Safety), daily weight (Action) is the gold standard for tracking fluid retention or loss."
+    },
+    {
+        v: "A patient in labor has a 'Late Deceleration' on the monitor. The nurse has turned the patient and started oxygen.",
+        q: "The nurse notes the 'Oxytocin' is still infusing. What is the 'Next Mandatory Action'?",
+        o: ["Turn off the Oxytocin infusion immediately", "Increase the Oxytocin to speed up the delivery", "Document the deceleration and continue monitoring", "Wait for the physician to arrive before changing the pump"],
+        a: 0, r: "Oxytocin causes contractions which further stress the placenta (Safety). You must stop the 'fuel' (Action) to improve fetal oxygenation."
+    },
+    {
+        v: "A 2-year-old child is suspected of having 'Intussusception'.",
+        q: "The nurse notes the child just passed a 'Normal, Brown, Formed Stool'.",
+        q: "What is the 'Immediate Clinical Action'?",
+        o: ["Notify the physician; the intussusception may have reduced itself", "Document the stool and continue with the scheduled barium enema", "Give the child a laxative to clear the rest of the bowel", "Encourage the child to eat a high-fiber meal"],
+        a: 0, r: "A normal stool (Action) often indicates the bowel has spontaneously reverted to its normal position (Safety), potentially canceling the need for surgery."
+    },
+    {
+        v: "A newborn has a 'Cephalohematoma' following a vacuum-assisted delivery.",
+        q: "Which 'Laboratory Value' should the nurse monitor closely over the next 48 hours?",
+        o: ["Serum Bilirubin", "Blood Glucose", "White Blood Cell Count", "Serum Calcium"],
+        a: 0, r: "As the blood in the hematoma breaks down (Safety), it releases bilirubin into the system, increasing the risk of jaundice (Action)."
+    },
+    {
+        v: "A child is diagnosed with 'Osteosarcoma' in the distal femur.",
+        q: "Which 'Clinical Finding' is most commonly reported at the time of diagnosis?",
+        o: ["Localized bone pain that is often attributed to 'growing pains'", "A visible open wound over the bone", "Sudden loss of hearing and vision", "Generalized bruising and petechiae"],
+        a: 0, r: "Bone cancer (Safety) often presents as vague pain (Action) that is frequently ignored or misdiagnosed as normal growth until a lump appears."
+    },
+    {
+        v: "A patient at 37 weeks gestation has 'Preeclampsia' and is receiving IV Hydralazine.",
+        q: "What is the 'Target Safety Range' for the diastolic blood pressure?",
+        o: ["90–100 mmHg (to maintain placental perfusion)", "60–70 mmHg", "As low as possible to prevent stroke", "110–120 mmHg"],
+        a: 0, r: "Dropping BP too low (Unsafe) can crash placental blood flow. The goal in preeclampsia (Safety) is a controlled reduction, not a return to 'normal' (Action)."
+    },
+    {
+        v: "An infant is born with 'Gastroschisis' (bowel protruding through the abdominal wall).",
+        q: "What is the 'Immediate Nursing Protection' for the exposed bowel?",
+        o: ["Cover the bowel with a sterile, saline-soaked, non-adherent dressing", "Wrap the bowel tightly with dry elastic bandages", "Apply a layer of petroleum jelly and leave it open to air", "Gently attempt to push the bowel back into the abdomen"],
+        a: 0, r: "Exposed bowel (Safety) dries out and becomes infected easily. A moist, sterile cover (Action) is essential to preserve tissue viability."
+    },
+    {
+        v: "A child with 'Cystic Fibrosis' is receiving 'Pancreatic Enzymes'.",
+        q: "When should these enzymes be administered for 'Maximum Safety and Efficacy'?",
+        o: ["With every meal and every snack", "Once a day in the morning on an empty stomach", "Only when the child has a bowel movement", "Two hours after eating to help with absorption"],
+        a: 0, r: "Enzymes (Action) are needed to digest fats and proteins in the food. If taken without food (Safety), they are ineffective and can irritate the mucosa."
+    },
+    {
+        v: "A patient in the fourth stage of labor (postpartum) has a 'Saturation of the Peri-pad' in 15 minutes.",
+        q: "What is the 'Immediate Action'?",
+        o: ["Massage the fundus and check for uterine atony", "Help the patient to the bathroom to void", "Start a second IV line for blood transfusion", "Document the finding as a normal postpartum lochia"],
+        a: 0, r: "Saturating a pad in <15 minutes (Safety) is a sign of hemorrhage. Fundal massage (Action) is the first step to stimulate contraction."
+    },
+    {
+        v: "A 6-year-old child is admitted for 'Tonsillectomy'.",
+        q: "The child is post-op and is 'Frequently Swallowing' while sleeping.",
+        q: "What is the 'Safety Concern'?",
+        o: ["Active bleeding from the surgical site", "The child is thirsty and needs water", "Normal reaction to the throat being sore", "The child is experiencing post-nasal drip"],
+        a: 0, r: "Frequent swallowing (Safety) is the classic 'silent' sign of hemorrhage in post-tonsillectomy patients as they swallow the blood (Action)."
+    },
+    {
+        v: "A patient is at 34 weeks gestation and is receiving 'Magnesium Sulfate' for preterm labor (Tocolysis).",
+        q: "Which 'Maternal Assessment' must be reported immediately to the provider?",
+        o: ["Urine output of 20 mL/hour", "Maternal heart rate of 90 bpm", "Deep tendon reflexes of 2+", "Patient reports feeling 'warm and flushed'"],
+        a: 0, r: "Magnesium is excreted by the kidneys. Low urine output (<30mL/hr) (Safety) leads to rapid Magnesium buildup and toxicity (Action)."
+    },
+    {
+        v: "A 12-month-old infant is diagnosed with 'Iron Deficiency Anemia'.",
+        q: "Which 'Dietary Instruction' should the nurse provide to the parents?",
+        o: ["Limit the intake of cow's milk to no more than 24 oz (720 mL) per day", "Increase the intake of whole milk to 48 oz per day", "Avoid giving the child any green leafy vegetables", "Give the iron supplement with a large glass of milk"],
+        a: 0, r: "Excessive milk (Safety) displaces iron-rich foods and can cause GI micro-bleeding. Milk also blocks iron absorption (Action)."
+    },
+    {
+        v: "A patient with 'Placental Abruption' is monitored for DIC.",
+        q: "The nurse notes the patient's 'Fibrinogen' level is 100 mg/dL (Normal: 200–400).",
+        q: "What does this 'Low Result' indicate?",
+        o: ["Clotting factors are being consumed rapidly", "The patient's liver is failing to produce protein", "The patient is over-hydrated with IV fluids", "This is a normal physiological change in late pregnancy"],
+        a: 0, r: "DIC (Safety) 'uses up' the fibrinogen to make tiny clots, leaving no clotting factors left to stop the major bleeding (Action)."
+    },
+    {
+        v: "A child is diagnosed with 'Otitis Media'.",
+        q: "Which 'Feeding Practice' increases the risk of this infection in infants?",
+        o: ["Propping the bottle during feedings", "Breastfeeding in an upright position", "Introducing solid foods at 6 months", "Cleaning the ears with cotton swabs after a bath"],
+        a: 0, r: "Bottle propping (Safety) allows milk to pool in the eustachian tubes, creating a breeding ground for bacteria (Action)."
+    },
+    {
+        v: "A patient at 24 weeks gestation is diagnosed with 'Incompetent Cervix' (Cervical Insufficiency).",
+        q: "Which 'Procedure' is used to mechanically keep the cervix closed?",
+        o: ["Cervical Cerclage", "Amniocentesis", "Chorionic Villus Sampling", "External Cephalic Version"],
+        a: 0, r: "A cerclage (Action) is a 'purse-string' suture that reinforces the cervix to prevent premature dilation and loss of the pregnancy (Safety)."
+    },
+    {
+        v: "A 3-year-old child is admitted with 'Hemolytic Uremic Syndrome' (HUS).",
+        q: "Which 'Diagnostic Triad' is expected in HUS?",
+        o: ["Anemia, Thrombocytopenia, and Acute Renal Failure", "Fever, Rash, and Joint pain", "Hypertension, Bradycardia, and Irregular breathing", "Diarrhea, Vomiting, and Jaundice"],
+        a: 0, r: "HUS (Safety) typically follows an E. coli infection. The destruction of RBCs and platelets leads to kidney clogging and failure (Action)."
+    },
+    {
+        v: "A laboring patient has 'Meconium-Stained Amniotic Fluid'.",
+        q: "What is the 'Safety Priority' immediately after the fetal head is delivered but before the body emerges?",
+        o: ["Assess if the infant is vigorous; if not, prepare for endotracheal suctioning", "Administer high-flow oxygen to the mother", "Immediately stimulate the baby to cry", "Perform a vigorous fundal massage"],
+        a: 0, r: "If the infant is not 'vigorous' (Safety), meconium can be aspirated into the lungs. Specialized suctioning (Action) may be required to clear the airway."
+    },
+    {
+        v: "A child with 'Type 1 Diabetes' has a morning blood glucose of 250 mg/dL and 2 AM glucose of 60 mg/dL.",
+        q: "What is this 'Phenomenon' called and how is it managed?",
+        o: ["Somogyi Effect; decrease the evening dose of NPH insulin", "Dawn Phenomenon; increase the evening dose of NPH insulin", "Insulin Resistance; switch to an insulin pump", "Diabetic Ketoacidosis; start an insulin drip"],
+        a: 0, r: "The Somogyi Effect (Safety) is a rebound hyperglycemia after a nighttime drop. Decreasing the insulin (Action) prevents the initial hypoglycemia."
+    },
+    {
+        v: "A nurse is caring for a newborn with 'Exstrophy of the Bladder'.",
+        q: "How should the 'Exposed Bladder Tissue' be protected?",
+        o: ["Cover with a sterile, non-adherent plastic wrap", "Apply a dry, sterile gauze dressing", "Leave open to the air to encourage scabbing", "Apply a thick layer of zinc oxide ointment"],
+        a: 0, r: "Dry gauze (Unsafe) will stick to and damage the sensitive bladder mucosa. Plastic wrap (Action) keeps the tissue moist and sterile (Safety)."
+    },
+    {
+        v: "A 15-year-old with 'Anorexia Nervosa' is admitted for 'Refeeding Syndrome'.",
+        q: "Which 'Electrolyte Shift' is the most dangerous during this time?",
+        o: ["Hypophosphatemia", "Hyperkalemia", "Hypercalcemia", "Hyponatremia"],
+        a: 0, r: "When a starving body starts eating (Action), cells pull phosphorus out of the blood (Safety) to make ATP, causing lethal cardiac and respiratory failure."
+    },
+    {
+        v: "A patient at 39 weeks gestation reports she 'Stopped Feeling the Baby Move'.",
+        q: "What is the 'Priority Action'?",
+        o: ["Perform a Non-Stress Test (NST) immediately", "Tell the mother to drink orange juice and wait 2 hours", "Auscultate for a fetal heart rate with a Doppler", "Schedule an ultrasound for the following morning"],
+        a: 0, r: "Decreased fetal movement (Safety) is a red flag for fetal distress or demise. An immediate NST or Doppler check (Action) is required."
+    },
+    {
+        v: "An infant is diagnosed with 'Biliary Atresia'.",
+        q: "Which 'Physical Finding' is the nurse most likely to see?",
+        o: ["Dark tea-colored urine and clay-colored stools", "Bright red blood in the stool", "Clear, dilute urine and dark brown stools", "Projectile vomiting and olive-shaped mass"],
+        a: 0, r: "Because bile cannot reach the gut (Safety), the stool lacks color (clay-colored) and the excess bilirubin is excreted in the urine (dark) (Action)."
+    },
+  {
+        v: "A newborn is suspected of having 'Coarctation of the Aorta'.",
+        q: "Which 'Assessment Finding' confirms the localized narrowing of the aorta?",
+        o: ["Higher blood pressure in the arms than in the legs", "Higher blood pressure in the legs than in the arms", "Weak radial pulses and bounding femoral pulses", "A continuous machinery-like murmur"],
+        a: 0, r: "Coarctation (Safety) obstructs blood flow to the lower body. This creates a pressure gradient (Action) where the upper body is hypertensive and the lower body is hypotensive."
+    },
+    {
+        v: "A patient at 32 weeks gestation is diagnosed with 'HELLP Syndrome'.",
+        q: "Which 'Lab Result Cluster' defines this life-threatening condition?",
+        o: ["Hemolysis, Elevated Liver enzymes, and Low Platelets", "High Hemoglobin, Elevated Lipids, and Low Potassium", "Hypoglycemia, Elevated Lactate, and Low Protein", "Hypernatremia, Elevated Lymphocytes, and Low Platelets"],
+        a: 0, r: "HELLP (Safety) is a severe variant of preeclampsia. It involves RBC destruction, liver inflammation, and coagulation failure (Action)."
+    },
+    {
+        v: "A 2-year-old child with 'Laryngomalacia' is being monitored.",
+        q: "Which 'Symptom' is characteristic of this congenital laryngeal abnormality?",
+        o: ["Inspiratory stridor that worsens when the infant is supine", "Expiratory wheezing that improves with activity", "A muffled, 'hot potato' voice", "Persistent productive cough and fever"],
+        a: 0, r: "Laryngomalacia (Safety) involves floppy airway tissues. Gravity makes it worse when lying flat (Action), causing the classic stridor."
+    },
+    {
+        v: "A patient is admitted for 'Ectopic Pregnancy' rupture.",
+        q: "Which 'Physical Sign' indicates blood is accumulating in the peritoneal cavity?",
+        o: ["Cullen’s Sign (blue discoloration around the umbilicus)", "Chadwick’s Sign (violet cervix)", "Goodell’s Sign (softening of the cervix)", "Hegar’s Sign (softening of the uterine isthmus)"],
+        a: 0, r: "Cullen’s sign (Safety) indicates intraperitoneal hemorrhage (Action), a surgical emergency in a ruptured ectopic pregnancy."
+    },
+    {
+        v: "A child with 'Cerebral Palsy' is receiving 'Baclofen'.",
+        q: "What is the 'Therapeutic Goal' of this medication?",
+        o: ["To reduce muscle spasticity and improve range of motion", "To increase cognitive function and alertness", "To prevent generalized tonic-clonic seizures", "To stimulate the production of dopamine"],
+        a: 0, r: "Baclofen (Action) is a muscle relaxant that targets the CNS to decrease the debilitating spasticity (Safety) common in Cerebral Palsy."
+    },
+    {
+        v: "A patient at 36 weeks gestation has 'Hydramnios' (Polyhydramnios).",
+        q: "Which 'Neonatal Complication' should the nurse prepare for at delivery?",
+        o: ["Esophageal atresia or tracheoesophageal fistula", "Renal agenesis (Potter’s Syndrome)", "Intrauterine growth restriction (IUGR)", "Post-term birth"],
+        a: 0, r: "Fetal inability to swallow amniotic fluid (Safety) leads to fluid buildup (Hydramnios). This is often caused by GI obstructions (Action)."
+    },
+    {
+        v: "A 3-month-old infant is diagnosed with 'Retinopathy of Prematurity' (ROP).",
+        q: "Which 'NICU Intervention' is a major risk factor for this condition?",
+        o: ["Prolonged exposure to high concentrations of oxygen", "Phototherapy for neonatal jaundice", "Administration of surfactant therapy", "Frequent blood draws for glucose monitoring"],
+        a: 0, r: "High oxygen levels (Safety) cause vasoconstriction and abnormal vessel growth in the retina (Action), potentially leading to blindness."
+    },
+    {
+        v: "A patient is in 'Preterm Labor' at 28 weeks. The provider orders 'Indomethacin'.",
+        q: "Which 'Fetal Safety Risk' requires monitoring with ultrasound?",
+        o: ["Premature closure of the Ductus Arteriosus", "Increased fetal urine output", "Hypertrophy of the fetal heart", "Cleft lip and palate"],
+        a: 0, r: "Indomethacin is a prostaglandin inhibitor (Action). Prostaglandins keep the Ductus Arteriosus open (Safety); blocking them can cause it to close too early."
+    },
+    {
+        v: "A child with 'Sickle Cell Anemia' is scheduled for a 'Transcranial Doppler' (TCD).",
+        q: "What is the 'Clinical Purpose' of this screening?",
+        o: ["To assess the risk of stroke by measuring blood flow velocity in the brain", "To look for evidence of a brain tumor", "To diagnose a recent concussion", "To monitor for signs of bacterial meningitis"],
+        a: 0, r: "TCD (Action) identifies high-velocity blood flow, which predicts an impending stroke (Safety) in children with Sickle Cell."
+    },
+    {
+        v: "A newborn with 'Phenylketonuria' (PKU) is being started on a special diet.",
+        q: "Which 'Common Food' must be avoided to prevent intellectual disability?",
+        o: ["High-protein foods like meat, dairy, and eggs", "Citrus fruits and juices", "Simple carbohydrates like white rice", "Vegetables like carrots and broccoli"],
+        a: 0, r: "PKU (Safety) involves the inability to metabolize phenylalanine (found in protein). Accumulation causes brain damage (Action)."
+    },
+    {
+        v: "A patient is 4 hours postpartum and hasn't voided. The fundus is 3 cm above the umbilicus and deviated to the right.",
+        q: "What is the 'Immediate Risk' if the bladder is not emptied?",
+        o: ["Uterine atony and postpartum hemorrhage", "Urinary tract infection", "Permanent bladder damage", "Inversion of the uterus"],
+        a: 0, r: "A full bladder (Safety) prevents the uterus from contracting. This leads to atony (Action), the #1 cause of hemorrhage."
+    },
+    {
+        v: "A 5-year-old child is diagnosed with 'Acute Lymphocytic Leukemia' (ALL).",
+        q: "Which 'Lab Value' is the highest priority for infection control?",
+        o: ["Absolute Neutrophil Count (ANC)", "Hemoglobin level", "Platelet count", "Serum Creatinine"],
+        a: 0, r: "ANC (Action) tells the nurse how many 'real' infection-fighting cells are left. If low (neutropenia), the child is at extreme risk for sepsis (Safety)."
+    },
+    {
+        v: "A patient at 41 weeks gestation has a 'Bishop Score' of 4.",
+        q: "What does this 'Score' indicate regarding labor induction?",
+        o: ["The cervix is 'unripe' and the induction has a higher chance of failure", "The cervix is ready and induction will likely be successful", "The patient should undergo a C-section immediately", "The fetus is in a breech presentation"],
+        a: 0, r: "A low Bishop score (<6) (Safety) means the cervix is not dilated or effaced enough for successful induction (Action)."
+    },
+    {
+        v: "A child is admitted with 'Reye’s Syndrome'.",
+        q: "Which 'History Finding' is typically associated with this syndrome?",
+        o: ["A recent viral illness treated with Aspirin", "A recent bacterial infection treated with Amoxicillin", "Exposure to lead-based paint", "A history of congenital heart disease"],
+        a: 0, r: "Aspirin use during a viral illness (Safety) triggers mitochondrial damage, leading to brain swelling and liver failure (Action)."
+    },
+    {
+        v: "A newborn is born with 'Imperforate Anus'.",
+        q: "Which 'Action' must the nurse take first?",
+        o: ["Keep the infant NPO and notify the surgeon", "Attempt to pass a rectal thermometer to clear the blockage", "Start oral feedings to see if the infant can defecate", "Place the infant in a prone position"],
+        a: 0, r: "Obstruction (Safety) requires surgery. Feeding the infant (Unsafe) will lead to vomiting and potential aspiration (Action)."
+    },
+    {
+        v: "A patient at 20 weeks gestation is diagnosed with 'Molar Pregnancy' (Hydatidiform Mole).",
+        q: "Which 'Follow-up Monitoring' is essential for the next year?",
+        o: ["Serial hCG levels to screen for Choriocarcinoma", "Weekly ultrasounds to look for a new fetus", "Daily blood pressure monitoring", "Frequent pelvic X-rays"],
+        a: 0, r: "Molar pregnancies (Safety) can turn into cancer. Monitoring hCG (Action) is the only way to detect early malignant changes."
+    },
+    {
+        v: "A 1-year-old child is hospitalized with 'Respiratory Syncytial Virus' (RSV).",
+        q: "Which 'Isolation Precaution' is mandatory?",
+        o: ["Contact Precautions (Gown and Gloves)", "Airborne Precautions (N95 Mask)", "Droplet Precautions only", "No isolation is needed for RSV"],
+        a: 0, r: "RSV is spread by direct contact with secretions and contaminated surfaces (Safety). Gown and gloves (Action) are required to prevent hospital spread."
+    },
+    {
+        v: "A nurse is caring for an infant with 'Biliary Atresia' post-Kasai procedure.",
+        q: "Which 'Vitamin Supplementation' is critical for this patient?",
+        o: ["Fat-soluble vitamins (A, D, E, and K)", "Water-soluble vitamins (B and C)", "Iron and Folic Acid", "Calcium and Magnesium"],
+        a: 0, r: "Poor bile flow (Safety) prevents the absorption of fats. Without supplementation (Action), the child will develop severe deficiencies."
+    },
+    {
+        v: "A laboring patient is experiencing 'Back Labor' due to an occiput posterior (OP) position.",
+        q: "Which 'Action' can help rotate the fetus and relieve pain?",
+        o: ["Encourage the patient to assume an all-pours (hands and knees) position", "Place the patient in a supine position", "Administer an immediate IV bolus of Oxytocin", "Apply fundal pressure during contractions"],
+        a: 0, r: "The hands-and-knees position (Action) uses gravity to help the fetal head rotate to an occiput anterior position (Safety)."
+    },
+    {
+        v: "A 10-year-old child with 'Hemophilia' has a head injury.",
+        q: "What is the 'First Priority'?",
+        o: ["Administer Factor replacement therapy immediately", "Perform a neurological assessment for 1 hour", "Apply ice to the site of the bump", "Wait for the CT scan results before giving any meds"],
+        a: 0, r: "In Hemophilia (Safety), any head trauma is a potential brain bleed. Give the factor first (Action), then assess."
+    },
+    {
+        v: "A newborn has 'Ambiguous Genitalia'.",
+        q: "Which 'Underlying Crisis' must be ruled out immediately?",
+        o: ["Congenital Adrenal Hyperplasia (Salt-wasting crisis)", "Turner’s Syndrome", "Klinefelter’s Syndrome", "Diabetes Insipidus"],
+        a: 0, r: "Adrenal hyperplasia (Safety) can lead to lethal electrolyte imbalances. Ambiguous genitalia (Action) is the first clinical clue."
+    },
+    {
+        v: "A patient at 38 weeks is in 'Active Labor'. The monitor shows 'Variable Decelerations'.",
+        q: "What is the 'Cause' and 'Immediate Action'?",
+        o: ["Cord compression; change maternal position", "Head compression; document and monitor", "Placental insufficiency; give oxygen", "Maternal fever; check temperature"],
+        a: 0, r: "Variables (Safety) mean the cord is being squeezed. Moving the mother (Action) usually relieves the pressure."
+    },
+    {
+        v: "A child with 'Vaso-occlusive Sickle Cell Crisis' is in extreme pain.",
+        q: "Which 'Pain Medication' is strictly avoided in children with Sickle Cell?",
+        o: ["Meperidine (Demerol)", "Morphine Sulfate", "Hydromorphone (Dilaudid)", "Ibuprofen"],
+        a: 0, r: "Meperidine (Action) breaks down into a metabolite that causes seizures (Safety) in patients with Sickle Cell."
+    },
+    {
+        v: "A patient 2 days postpartum has a 'Red, Warm, and Tender' area on her left calf.",
+        q: "What is the 'Priority Action'?",
+        o: ["Elevate the leg and notify the provider; avoid massaging the area", "Massage the calf to improve circulation", "Encourage the patient to walk more to break up the clot", "Apply a cold compress to the area"],
+        a: 0, r: "Suspected DVT (Safety) requires bedrest and elevation. Massage (Unsafe) could dislodge the clot, causing a PE (Action)."
+    },
+    {
+        v: "A 3-year-old child is admitted for 'Drowning' (Submersion injury).",
+        q: "Which 'Safety Window' is the most critical for monitoring 'Secondary Drowning' (Pulmonary Edema)?",
+        o: ["The first 24 hours after the event", "The first 30 minutes", "7 days after the event", "Only if the child develops a fever"],
+        a: 0, r: "Aspiration of water (Safety) causes delayed lung inflammation. Monitoring for at least 24 hours (Action) is mandatory even if the child seems fine initially."
+    }    
+];
+
+function renderQuiz() {
+    const mount = document.getElementById('quiz-mount');
+    mount.innerHTML = questions.map((q, i) => `
+        <div class="q-card">
+            <div class="vignette">${i+1}. ${q.v}</div>
+            <label class="question">${q.q}</label>
+            ${q.o.map((opt, j) => `
+                <label class="opt">
+                    <input type="radio" name="q${i}" value="${j}"> ${opt}
+                </label>
+            `).join('')}
+        </div>
+    `).join('');
+}
+
+function analyzePerformance() {
+    const candidateName = document.getElementById('candidate').value || "ANONYMOUS";
+    let score = 0;
+    let report = "";
+
+    questions.forEach((q, i) => {
+        const selected = document.querySelector(`input[name="q${i}"]:checked`);
+        const userVal = selected ? parseInt(selected.value) : null;
+        const isCorrect = userVal === q.a;
+        if(isCorrect) score++;
+
+        report += `
+            <div class="result-row">
+                <strong>Item ${i+1}:</strong> ${isCorrect ? '<span class="pass-marker">[DETECTION SUCCESS]</span>' : '<span class="fail-marker">[SAFETY TRAP TRIGGERED]</span>'}
+                <p style="margin:5px 0"><em>Situation: ${q.v}</em></p>
+                <div class="rationale"><strong>Rationale:</strong> ${q.r}</div>
+            </div>`;
+    });
+
+    document.getElementById('meta-data').innerHTML = `
+        CANDIDATE: ${candidateName.toUpperCase()}<br>
+        FINAL SCORE: ${score} / 100<br>
+        STATUS: ${score >= 60 ? 'ELIGIBLE' : 'FAILURE'}<br>
+        DATE: ${new Date().toLocaleString()}
+    `;
+    
+    document.getElementById('analysis-results').innerHTML = report;
+    document.getElementById('exam-view').style.display = "none";
+    document.getElementById('transcript').style.display = "block";
+    window.scrollTo(0,0);
+}
+
+renderQuiz();
+</script>
+
+</body>
+</html>
